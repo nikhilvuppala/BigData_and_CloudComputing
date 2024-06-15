@@ -1,0 +1,63 @@
+
+Review/text [Student 3]
+
+-- Review text analytics (e.g., count words in review texts)
+review_words = FOREACH movie_reviews GENERATE FLATTEN(TOKENIZE(text)) AS word;
+grouped_words = GROUP review_words BY word;
+word_counts = FOREACH grouped_words GENERATE group AS word, COUNT(review_words) AS count;
+ordered_word_counts = ORDER word_counts BY count DESC;
+limited_word_counts = LIMIT ordered_word_counts 10;
+store word_counts into '/home/st8vf/git/pig/output/ word_countsÕ;
+store ordered_word_counts into '/home/st8vf/git/pig/output/ordered_word_counts';
+
+Review/summary[Student 3]
+
+-- Review summary analytics (e.g., count words in review summaries)
+summary_words = FOREACH movie_reviews GENERATE FLATTEN(TOKENIZE(summary)) AS word;
+grouped_summary = GROUP summary_words BY word;
+summary_counts = FOREACH grouped_summary GENERATE group AS word, COUNT(summary_words) AS count;
+ordered_summary_counts = ORDER summary_counts BY count DESC;
+limited_summary_counts = LIMIT ordered_summary_counts 10;
+store summary_counts into '/home/st8vf/git/pig/output/ summary_counts';
+store ordered_summary_counts into '/home/st8vf/git/pig/output/ordered_summary_counts';
+
+//helpfulness Student 1
+
+
+-- Extract necessary fields
+helpfulness_data = FOREACH movie_reviews GENERATE
+    REGEX_EXTRACT(value, 'review/helpfulness: (\\d+)/(\\d+)', 1) AS numerator:int,
+    REGEX_EXTRACT(value, 'review/helpfulness: (\\d+)/(\\d+)', 2) AS denominator:int;
+
+-- Filter out records with Denominator > 0
+filtered_data = FILTER helpfulness_data BY denominator > 0;
+
+-- Calculate helpfulness ratio
+helpfulness_ratio = FOREACH filtered_data GENERATE
+    numerator / (double)denominator AS helpfulness:double;
+
+-- Aggregate by helpfulness
+grouped_data = GROUP helpfulness_ratio ALL;
+result = FOREACH grouped_data {
+    sorted_data = ORDER helpfulness_ratio BY helpfulness DESC;
+    limited_data = LIMIT sorted_data 100; -- Set the limit to the desired value
+    GENERATE
+        COUNT(limited_data) AS total_reviews,
+        AVG(limited_data.helpfulness) AS average_helpfulness;
+}
+
+-- Display the result
+STORE result INTO '/home/dmkkb/Downloads/helpfulnessÕ;
+
+//Scores Student2
+
+//Loading the data base on the colon as a delimeter 
+reviews = LOAD '/home/nv8vm/Downloads/movies.txt' USING PigStorage(':') AS (field:chararray,value:chararray);
+//converting the particular field according to the required datatype
+score = FOREACH (FILTER reviews BY field == 'review/score') GENERATE field AS field,(double)value AS score;
+//filter the records of the particular field which is greater than 2.0 by eliminating less than 2.0
+filteredscore = filter score by field == 'review/score' and score>=2.0;
+// group by scores
+groupscores =group  filteredscore all;
+//aggregation for the particular field column
+result = foreach groupscores generate COUNT($1) as num_reviews, MAX($1.score) as Max_Score, MIN($1.score) as Min_Score,AVG($1.score) as Avg_Score;
