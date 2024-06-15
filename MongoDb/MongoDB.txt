@@ -1,0 +1,28 @@
+
+
+Import:
+
+mongoimport --db mydb --collection Books --type json --file '/home/st8vf/Downloads/Books_5.json' 
+
+
+Student 1:
+
+db.Books.find({$or: [ { overall: 1 },{ overall: 3 }, { overall: 5 } ] },{_id: 0, summary: 1, overall: 1 });
+
+
+Student 2:
+
+db.Books.find({$and: [{ overall: { $gt: 1, $lt: 3 } },{reviewerName: {$exists: true}}]},{_id: 0, reviewerName: 1, overall: 1}).sort({ reviewerName: 1 });
+
+Joint:
+
+db.Books.aggregate([{$group: {_id: "$reviewerName", min_value: {$min: "$overall"}}}, {$limit: 10}]).pretty()
+
+Student 3:
+
+db.Books.aggregate([ { $group: { _id: "$helpful", totalEntries: { $sum: 1 } } }, { $sort: { totalEntries: -1 } }] )
+
+Joint:
+
+db.Books.find({reviewText : { $regex: /\d/}},{_id:0, reviewText:1});
+
